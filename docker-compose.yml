@@ -1,0 +1,20 @@
+version: '3.3'
+
+services:
+    deforum_stable_diffusion_chatbot:
+        build:
+            context: .
+            dockerfile: Dockerfile
+        restart: always
+        image: deforum-stable-diffusion-chatbot:v${IMAGE_VERSION}
+        hostname: deforum_stable_diffusion_chatbot
+        container_name: deforum_stable_diffusion_chatbot
+        command: ["./run.sh"]
+        volumes:
+            - ./resource:/resource:rw
+        environment:
+            - NUM_WORKERS=${NUM_WORKERS}
+            - OPENAI_API_KEY=${OPENAI_API_KEY}
+
+        ports:
+            - 8086:8000

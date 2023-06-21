@@ -1,0 +1,9 @@
+openai==0.27.2
+langchain==0.0.196
+llama-index==0.6.23
+numpy==1.23.5
+python-multipart==0.0.6
+fastapi==0.95.0
+uvicorn==0.21.1
+requests==2.28.1
+textract==1.6.5

@@ -1,0 +1,974 @@
+﻿* A few words about keyframing.
+All parameters that end with _schedule can be keyframed - have different values for different frame numbers during the animation.
+The syntax is the same for keyframing all of the various schedule parameters. Let's consider the following keyframing values of an imaginary parameter: 0:(0), 1:(1), 5:(5), 10:(10).
+At frame 0 we set a value of 0, at frame 1 a value of 1, at frame 5 a value of 5 and at frame 10 a value of 10.
+The values between the frames won't stay the same until the next new value, but will instead move linearly towards the next value, frame by frame. So in a param that behaves linearly (e.g strength_schedule) the actual values of the first 11 frames will look like this:
+0:(0),1:(1),2:(2),3(3),4:(4),5:(5),6:(6),7:(7),8:(8),9:(9),10:(10)
+Prompts and schedules can use MATHs formulas as well. Read more here.
+
+
+Animation Modes
+2D:
+This mode will attempt to string the images produced in a sequence of coherent outputs. The number of output images to be created is defined by max_frames.
+The motion operators that control 2D mode are as follows: border, angle, zoom, translation_x, translation_y, noise_schedule, contrast_schedule, color_coherence, diffusion_cadence, save_depth_maps.
+Other animation parameters have no effect during 2D mode. resume_from_timestring is available during 2D mode (more details below).
+3D:
+This mode will attempt to string the images produced in a sequence of coherent outputs. The number of output images to be created is defined by max_frames. The motion operators that control 3D mode are as follows: border, translation_z, translation_x, translation_y, rotation_3d_x, rotation_3d_y, rotation_3d_z, noise_schedule, contrast_schedule, color_coherence, diffusion_cadence, 3D depth warping, midas_weight, fov, padding_mode, sampling_mode, save_depth_map.
+Other animation parameters have no effect during 3D mode. resume_from_timestring is available during 2D mode (more details below).
+Video Input:
+When selected, will ignore all motion parameters and attempt to reference a video loaded into the runtime, specified by the video_init_path. Video Input mode will ignore the “none mode” prompts and refer to the prompts that are scheduled with a frame number before them. “Max_frames” is ignored during video_input mode, and instead, follows the number of frames pulled from the video’s length. The notebook will populate images from the video into the selected drive as a string of references to be impacted. The number of frames to be pulled from the video is based on “extract_nth_frame”. Default of 1 will extract every single frame of the video. A value of 2 will skip every other frame. Values of 3 and higher will effectively skip between those frames yielding a shorter batch of images. Currently, video_input mode will ignore all other coherence parameters, and only affect each frame uniquely. Resume_from_timestring is NOT available with Video_Input mode.
+Interpolation:
+When selected, will ignore all other motion and coherence parameters, and attempt to blend output frames between animation prompts listed with a schedule frame number before them. If interpolate_key_frame mode is checked, the number of output frames will follow your prompt schedule. If unselected, the interpolation mode will follow an even schedule of frames as specified by interpolate_x_frames, regardless of prompt numbering. A default value of 4 will yield four frames of interpolation between prompts.
+
+
+Animation Parameters
+animation_mode selects the type of animation (see above).
+max_frames Specifies the number of images to generate in total for 2D and 3D modes only.
+border controls handling method of pixels to be generated when the image is smaller than the frame. “Wrap” pulls pixels from the opposite edge of the image, while “Replicate” repeats the edge of the pixels, and extends them. Animations with quick motion may yield “lines” where this border function was attempting to populate pixels into the empty space created.
+
+
+
+Motion Parameters
+angle is a 2D (only) operator to rotate the canvas clockwise/ anticlockwise in degrees per frame.
+zoom is a 2D (only) operator that scales the canvas size, multiplicatively. **For Static/No zoom at all please set zoom=1.0**
+translation_x is a 2D & 3D operator to move the canvas left/right in pixels per frame.
+translation_y is a 2D & 3D operator to move the canvas up/down in pixels per frame.
+translation_z is a 3D (only) operator to move the canvas towards/away from view. [speed is based on fov]
+rotation_x is a 3D (only) operator to tilt the canvas up/down in degrees per frame.
+rotation_y is a 3D (only) operator to pan the canvas left/right in degrees per frame.
+rotation_z is a 3D (only) operator to roll the canvas clockwise/ anticlockwise.
+flip_2D_perspective when set to True, will enable 2D mode functions to simulate “faux” 3D movement.
+perspective_flip_theta is used only when flip_2D_perspective is enabled, and controls the "roll" effect angle.
+perspective_flip_phi is used only when flip_2D_perspective is enabled, and controls the “tilt” effect angle.
+perspective_flip_gamma is used only when flip_2D_perspective is enabled, and controls the “pan” effect angle.
+perspective_flip_fv is used only when flip_2D_perspective is enabled, and controls the 2D vanishing point of perspective. Recommended range: 30-160
+
+
+
+General Parameters
+strength_schedule is a global operator that controls how much the presence of the previous frame influences the next frame. Also controls the actual steps per image using the following formula: [steps - (strength_schedule * steps)]
+contrast_schedule is a global operator that adjusts the overall contrast per frame. [default neutral at 1.0]
+cfg_scale_schedule is a global operator that controls the Guidance Scale (CFG/ classifier free guidance) for each keyframe. Lower values give SD more space for imagination, while with higher values it will more strictly follow the prompt. Too low of a value and your output won't look like the prompt at all, and too high of a value will look saturated and bizarre. Recommended range: 7-12.5
+seed_schedule is used only when seed_behavior=schedule, and it sets the seed for each keyframe. Last value will persist until there is a change, unlike most or all other numeric-based schedules. More info coming soon™.
+
+
+
+
+3D FOV (Field Of View) Parameters
+fov_schedule is in use only when animation_mode=3D, and it adjusts the scale at which a canvas is moved in 3D by the translation_z value. Range is -180 to +180. The value follows the inverse square law of a curve in such a way that 0 FOV is undefined and will produce a blank image output. A FOV of 180 will flatten and place the canvas plane in line with the view, causing no motion in the Z direction. Negative values of FOV will cause the translation_z instructions to invert, moving in an opposite direction to the Z plane, while retaining other normal functions.A value of 30 fov is default whereas a value of 100 would cause transition in the Z direction to be more smooth and slow. Each type of art and context will benefit differently from different FOV values. (ex. “Still-life photo of an apple” will react differently than “A large room with plants”).
+near_schedule
+Far_schedule
+
+
+
+
+Anti-Blur Parameters
+This feature tries to minimize the blurriness that is developing with the animation in some scenarios.
+It makes a Gaussian blur of the image and then subtracts it from the source in an attempt to sharpen the image in the process.
+
+
+kernel_schedule is used only when amount_schedule>0, and it controls the dimensions of the matrix on which the distribution is computed.
+sigma_schedule is used only when amount_schedule>0, and it controls the 'width' of the each blurred pixel.
+amount_schedule controls how much of the difference (between the gaussian blur version of the img and the actual img) is added back.
+threshold_schedule is used only when amount_schedule>0, and it sets the minimum difference in pixel values that indicates an edge where sharpen must be applied. So you can protect areas of smooth tonal transition from sharpening, and avoid creation of blemishes in face, sky or water surface.
+
+
+
+
+Coherence Parameters
+reroll_blank_frames controls what happens if/ when deforum encounters a blank or black output image during generation of the animation.
+reroll will try to generate a new image instead of the broken one.
+interrupt will stop the generation mid-run if it encounters a broken frame.
+ignore will ignore the broken frame and continue the run like nothing happened.
+histogram_matching
+color_coherence
+Diffusion_cadence
+
+
+
+
+Noise Parameters
+noise_schedule is a global operator to control the amount of to add per frame for diffusion diversity.
+noise_type is a global operator to control the type of noise that is applied to the images during the run.
+Perlin is a more natural looking noise. It is heterogeneous and less sharp than uniform noise, this way it is more likely that new details will appear in a more coherent way. It's the new default settings.
+Uniform is the old type of noise that is, well, uniform. Controlled solely by noise_schedule.
+perlin_w is used only when noise_type=perlin, and it controls the width of the Perlin sample. Lower values will make larger noise regions. Think of it as inverse brush stroke width. The greater this setting, the smaller details it will affect.
+perlin_h is used only when noise_type=perlin, and it controls the height of the Perlin sample. Lower values will make larger noise regions. Think of it as inverse brush stroke width. The greater this setting, the smaller details it will affect.
+perlin_octaves is used only when noise_type=perlin, and it control the number of Perlin noise octaves, that is the count of P-noise iterations. Higher values will make the noise more soft and smoke-like, whereas lower values will make it look more organic and spotty. It is limited by 8 octaves as the resulting gain will run out of bounds.
+perlin_persistence is used only when noise_type=perlin, and it controls how much of noise from each octave is added on each iteration. Higher values will make it more straighter and sharper, while lover values will make it rounder and smoother. It is limited by 1.0 as the resulting gain fill the frame completely with noise.
+
+
+
+
+3D Depth Warping Parameters
+use_depth_warping is used only in 3D mode. It should be enabled always as without it 3D mode isn't 3D mode. It actually tells Deforum to warp the image dynaimcally using its 3D sub-models (MiDaS and AdaBins).
+midas_weight is used only when animation_mode=3D and use_depth_warping=true, and it sets a midpoint at which a depthmap is to be drawn. Range: -1 to +1.
+padding_mode is used only when animation_mode=3D and use_depth_warping=true, and it instructs the handling of pixels outside the field of view as they come into the scene.
+border will attempt to use the edges of the canvas as the pixels to be drawn.
+reflection will attempt to approximate the image and tile/repeat pixels.
+zeros will not add any new pixel information.
+Recommended value: border.
+sampling_mode is used only when animation_mode=3D and use_depth_warping=true, and it sets the sampling mode.
+bicubic
+bilinear
+nearest.
+save_depth_maps is used only when animation_mode=3D and use_depth_warping=true, and it sets whether or not to save a greyscale depth-map of each image in addition to the regular output image.
+
+
+
+
+Hybrid Video Compositing in 2D/3D Animation Modes
+
+Overview:
+* This is NOT for ‘Video Input’ animation mode.
+* Hybrid video allows for video input using ‘2D’ or ‘3D’ animation_mode by mixing video into the init image (prev_img) using various compositing methods, prior to generation.
+* Hybrid video motion settings allow you to use the motion from a video with or without compositing the actual video into the render.
+* Hybrid color coherence options allow for frame-by-frame color coherence with video, whether mixing video in or not.
+
+
+Settings Detail:
+* hybrid_generate_inputframes: True | False
+   * Initiates extraction of video frames from your video_init_path to the inputframes folder. You only need to do this once and then you can change it to False and rerender. 
+   * Obeys extract_nth_frame, just like normal Video Input mode.
+   * If overwrite_extracted_frames is True, all images in inputframes and hybridframes folders are deleted at the start of the process and regenerated.
+* hybrid_use_first_frame_as_init_image: True | False
+   * If True, uses the first frame of the video as the init_image. False can create interesting transition effects into the video, depending on settings. 
+* hybrid_use_init_image_as_video: True | False
+   * If True, uses the init_image as if it was every frame of video. 
+   * If you want to use your init image on the first frame, you still have to enable the option to do that in Init tab.
+   * If you also use `hybrid_use_first_frame_as_init_image`, it will do just what it says and use the first frame of whatever generated video inputframes you have as your init image.
+* hybrid_motion: Analyzes 2 video frames at a time for their motion and applies the motion to the render.
+Perspective and Affine RANSAC modes capture the motion of the camera and move the entire scene to match.
+Optical flow modes capture the motion of every pixel in the scene and move every pixel to match.
+   * None: No data will be collected or stored.
+   * Perspective: Uses RANSAC to make a 3x3 transformation matrix with angle, scale, rotation, and skew
+   * Affine: Uses RANSAC to make a 3x2 transformation matrix with angle, scale, and rotation (no skew)
+   * Optical Flow: Captures optical flow of entire image, uses it to warp rendering.
+   * *Normal 2D or 3D animation keyframing translations, zoom, rotation, depth, etc can all still be used
+   * But, they can be fighting against the video movement. Beware. May cause cool effects.
+   * Motion modes may still be used when hybrid_composite = 'None', to just transfer the motion from a video
+   * hybrid_flow_method: DIS Fine | DIS Medium | Farneback
+   * DIS Fine - DIS (Dense Inverse Search) is a dense optical flow. 1 pixel accuracy. Catches more fine detail, but can be more noisy.
+   * DIS Medium - DIS (Dense Inverse Search) is a dense optical flow. 2 pixel accuracy.
+   * Farneback - Farneback is a sparse optical flow. Although DIS is recommended, Farneback can produce good results too. They are different.
+   * Enable hybrid_comp_save_extra_frames to view visualizations of the flows.
+   * hybrid_motion_use_prev_img: True | False
+   * If enabled, changes the behavior or hybrid_motion to captures motion by comparing the current video frame to the previous rendered image, instead of the previous video frame.
+   * Affects RANSAC Perspective/Affine or Optical Flow.
+   * If your rendering varies a lot from the video, this setting could produce unpredictable results.
+   * hybrid_composite: None | Normal | Before Motion | After Generation
+Normal Deforum 2D/3D animation works by feeding the generated frame back in as the previous image to initialize the next frame. Hybrid compositing allows you to composite images from video into this initialization image in various ways, or allows you to composite into each final rendered image (which also goes back through as the previous image every cycle).
+      * None
+      * Hybrid compositing is off. No video will be mixed into the render. 
+      * Note that you may still use the generated inputframes to transfer hybrid motion even if you haven’t enabled a hybrid compositing mode.
+      * Normal
+      * If hybrid motion is being used, the motion warps the previous image before it goes in for video compositing. The goal is to warp the previous image in the same way as the video is moving, so that when the compositing happens, it’s already lined up for mixing.
+      * At hybrid comp alpha of 1, motion will not be transferred at all, since the video will be mixed in at full alpha and overwrite the motion warped previous image.
+      * Before Motion
+      * In this mode, compositing happens before any hybrid motion.
+      * This allows you to do things like mix video in at hybrid comp alpha of 1, and still warp the entire frame using hybrid motion. Normally, comp alpha 1 would overwrite any motion that hybrid motion does.
+      * After Generation
+      * In this mode, compositing is moved all the way to the end of the process, after the rendering is completed. The difference here is that if you mix the video in at 50%, you will literally see 50% of the actual video mixed in, since it isn’t being mixed into the previous image before generation, it’s being mixed after generation is completed. However, this frame then goes back in the next cycle as the previous image.  
+      * Compositing settings (options below don't do anything if hybrid composite is `None`)
+      * hybrid_comp_mask_type:
+Mask types control the way that video is composited with the previous image each frame.
+         * None: Video is mixed in without using a compositing mask.
+         * Depth: Composite mask uses depth maps created during rendering
+         * Uses the depth maps that deforum already generates.
+         * Requires 3D animation mod, 3D Depth Warping, and save_depth_maps = True
+         * Video Depth: Composite mask uses depth maps created during generation of inputframes from video
+         * Option must be on before generation in order to generate the depth maps.
+         * Blend: Composited mask is generated from a blend of video and previous image
+         * Use hybrid_comp_mask_blend_alpha_schedule to control the blend amount.
+         * Difference: Video is composited based on a difference map of video and previous image
+         * hybrid_comp_alpha_schedule: 0-1
+         * Schedule controls how much the composite video is mixed in, whether set to mask is None or using a mask.
+         * hybrid_comp_mask_blend_alpha_schedule: 0-1
+         * Schedule only used if mask type is Blend. How much of the video to blend with the previous image to create the mask. This is very different than the comp alpha, which controls the mix of whatever video compositing you select. 
+         * hybrid_comp_mask_contrast_schedule: 0-255 - 1 is normal
+         * Schedule controls the contrast of the grayscale composite mask
+         * hybrid_comp_mask_equalize: True | False
+         * If True, equalizes the mask for the composite.
+         * hybrid_comp_mask_auto_contrast: True | False
+         * Auto contrast uses schedules below for it's low and high cutoff percentages.
+         * hybrid_comp_mask_inverse: True | False
+         * Inverts the composite mask.
+         * hybrid_comp_mask_auto_contrast_low_schedule: 0-100 - percentage
+         * hybrid_comp_mask_auto_contrast_high_schedule: 0-100 - percentage
+         * hybrid_comp_save_extra_frames: True | False
+         * Saves all frames generated during the hybrid video process into hybridframes folder. Depending on settings, these may include:
+         * video depth, composites, prev_image, masks, and optical flow visualizations
+         * When hybrid_comp_mask_type is Depth or Video Depth, those frames are always saved.
+         * hybrid_use_video_as_mse_image: True | False (currently not available in webui)
+         * Uses current video frame for init_mse_image every frame.
+
+Hybrid Video Color Coherence
+         * color_coherence = "Video Input" color matches each frame against the corresponding video frame!
+         * color_coherence_video_every_N_frames: Number (Default: 1)
+if color_coherence is set to Video Input, this only updates color from the video every N frames
+            * Video color coherence will work if any of these conditions are met:
+            * hybrid_composite is True
+            * hybrid_motion is Perspective, Affine, or Optical Flow
+            * In any of those cases, a video is available to match to.
+            * You can even match the color of an input video without using the video as a composite if you set composite alpha schedule to 0, or if you just use one of the motion modes.
+            * color_coherence = "Image" color matches each frame against an image.
+            * Color_coherence_image_path: Path to image file/url
+            * color_force_grayscale: True | False 
+            * Forces images to grayscale before and after generation.
+            * Allows for a color_coherence mode to take effect (which can introduce color), but the image is then forced to grayscale as the init image before generation, and then forced to grayscale again after generation. This ensures the best grayscale coherence, and the color_coherence setting provides for different grayscale schemes depending on your settings (or reference video).
+            * The image produced is still RGB. It just has colors forced to grayscale.
+            * This mode is particularly effective when using the 512-depth-ema.ckpt on lower strengths. When using low strength, it is still informed by depth, but the colors can shift wildly.
+
+Coherence
+               * optical_flow_cadence: Select type of optical flow or `None`
+               * Changes the behavior of cadence to use optical flow to morph one frame into the next over the series of cadence frames. This is a significant improvement to cadence, and increases the possibilities of high cadence videos, and the performance is fast.
+               * cadence_flow_factor_schedule: Schedule, see description
+               * Allows you to control the flow factor or the optical flow cadence. 1 is normal, -1 is reverse, 0.5 is half, etc.
+               * optical_flow_redo: Select type of optical flow or `None`
+               * Does a generation before the final generation. Captures the optical flow between the previous image and the new generation, then warps the generation using that flow, and that image goes in for final generation.
+               * redo_flow_factor_schedule: Schedule, see description
+               * Allows you to control the flow factor or the optical flow redo generation. 1 is normal, -1 is reverse, 0.5 is half, etc.
+               * redo_generation: Slider for N count
+               * Like optical flow redo, but without optical flow. It feeds the output of the generation back into the input of the generation N times before final generation.
+New Seed Behaviors
+               * seed_behavior = "iter" (existing):
+               * Added seed_iter_N: Keeps same seed for N frames
+               * Ex. If set to 1, iterates normally like 0, 1, 2, 3, 4, 5, 6, 7, 8, 9…
+               * Ex. If set to 3, it will go 0, 0, 0, 1, 1, 1, 2, 2, 2, 3, 3, 3, 4, 4, 4…
+               * seed_behavior = "ladder":
+               * Increments + 2 then decrements -1 for a pattern like 0, 2, 1, 3, 2, 4, 3, 5…
+               * seed_behavior = "alternate":
+               * Increments + 1 then decrements -1 for a pattern like 0, 1, 0, 1, 0, 1, 0, 1…
+Better 3D Depth Warping
+               * There was a bug present in 3D depth warping which would cause things to stretch in one axis over time. With wide images it would stretch vertically, and with skinny images it would stretch horizontally. This prevented any consistent depth stretching on anything that was not 1:1 proportion. Found and fixed the bug.
+Fixed 3D Depth Map Normalization & Equalization
+               * I completely reworked and fixed the core 3D image transform functions to allow handling of different depth models and properly normalize whatever depth tensor comes in. No more tearing on the edges, no more sudden lurches forward. I also introduced equalization to the depth maps, providing for a more constant feeling with your keyframed motion.
+Fixed Resume with Cadence
+               * There were several bugs with resuming, and especially resuming from an animation with cadence. I fixed it.
+Overlay Masks with Cadence
+               * Overlay masks used to work, but were broken at some point.  I fixed them, and also made them work with cadence, which they never did.
+
+
+
+
+Single-parameter change comparison videos
+Note that clicking on the youtube previews below will open a youtube link.
+
+
+This page is updated almost daily.
+
+
+In this section all of the comparison videos are sharing the same settings except for one single parameter that is changed. The changed parameter is in the name of the videos, and in the info below the videos. Note that you might need to populate the outdir param if you import the settings files in order to reproduce.
+
+
+All of the videos are 15 FPS and made using the SD V1.5 model with its VAE, unless stated otherwise.
+
+
+The youtube versions are upscaled 2x using Topaz Video Ai. RAW mp4s of each of the individual example video should be listed under the videos preview window.
+* You might want to check out the raw mp4s in the noise-related videos, as the youtube versions are upscaled and therefore might not show the full-picture noise wise.
+
+
+Rotation_3d_z
+The only parameter that was changed in these videos is rotation_3d_z.
+Settings file to reproduce: 3DRotationZCompSettings.txt
+Original mp4s: rotation_3d_z=0/reference; rotation_3d_z=1; rotation_3d_z=2; rotation_3d_z=4; rotation_3d_z=8; rotation_3d_z=-1; rotation_3d_z=-2; rotation_3d_z=-4; rotation_3d_z=-8
+
+
+
+
+rotation_3d_y
+The only parameter that was changed in these videos is rotation_3d_y.
+Settings file to reproduce: 3DRotationYCompSettings.txt
+Original mp4s: rotation_3d_y=0; rotation_3d_y=0.5; rotation_3d_y=1; rotation_3d_y=2; rotation_3d_y=3; rotation_3d_y=-0.5; rotation_3d_y=-1; rotation_3d_y=-3
+
+
+
+
+rotation_3d_x
+The only parameter that was changed in these videos is rotation_3d_x.
+Settings file to reproduce: 3DRotationXCompSettings.txt
+Original mp4s: rotation_3d_x=0; rotation_3d_x=0.5; rotation_3d_x=1; rotation_3d_x=2; rotation_3d_x=-1; rotation_3d_x=-2
+
+
+FOV (Field Of View)
+The only parameter that was changed in these videos is fov_schedule.
+Settings file to reproduce: FovVid1CompSettings.txt
+Originl mp4s: fov=20; fov=30; fov=40; fov=50; fov=60; fov=70; fov=80; fov=90
+
+
+Cadence
+The only parameter that was changed in these videos is diffusion_cadence.
+Settings file to reproduce: 3DCadenceVid1CompSettings.txt
+Originl mp4s: cadence=1; cadence=2; cadence=3; cadence=4; cadence=5; cadence=6; cadence=7; cadence=8
+
+
+Perspective_flip_theta
+The only parameter that was changed in these videos is perspective_flip_theta.
+Settings file to reproduce: 2DPerspectiveFlipThetaCompSettings.txt
+Original mp4s: perspective_flip_theta Turned Off; perspective_flip_theta=0.25; perspective_flip_theta=0.5; perspective_flip_theta=0.75; perspective_flip_theta=-0.25; perspective_flip_theta=-0.5; perspective_flip_theta=-0.75
+
+
+Perspective_flip_gamma
+The only parameter that was changed in these videos is perspective_flip_gamma.
+Settings file to reproduce: 2DPerspectiveFlipGammaCompSettings.txt
+[Original mp4s: Reference/ Turned off; perspective_flip_gamma=1; perspective_flip_gamma=2; perspective_flip_gamma=3; perspective_flip_gamma=4; perspective_flip_gamma=-1; perspective_flip_gamma=-2; perspective_flip_gamma=-3; perspective_flip_gamma=-4
+
+
+Perspective_flip_phi
+The only parameter that was changed in these videos is perspective_flip_phi.
+Settings file to reproduce: 2DPerspectiveFlipPhiCompSettings.txt
+Original mp4s: Reference/ Turned off; perspective_flip_phi=0.5; perspective_flip_phi=1; perspective_flip_phi=0.2; perspective_flip_phi=3; perspective_flip_phi=-0.5; perspective_flip_phi=-1; perspective_flip_phi=-2; perspective_flip_phi=-3
+
+
+Perlin_persistence
+The only parameter that was changed in these videos is perlin_persistence.
+Settings file to reproduce: 3DPerlinPersistenceVid1CompSettings.txt
+Original mp4s: Coming soon.
+
+
+Anti Blur 2D Static Zoom amount_schedule
+The only parameter that was changed in these videos is amount_schedule.
+Settings file to reproduce: 2DStaticZoomAntiBlurAmountCompSettings.txt
+Original mp4s: amount_schedule=0; amount_schedule=0.1; amount_schedule=0.2; amount_schedule=0.3; amount_schedule=0.4; amount_schedule=0.5; amount_schedule=1; amount_schedule=2
+
+
+Anti Blur 2D Zoom-In amount_schedule
+The only parameter that was changed in these videos is amount_schedule.
+Settings file to reproduce: 2DZoomInAntiBlurAmountCompSettings.txt
+Original mp4s: Coming soon.
+
+
+Anti Blur 2D Zoom-Out sigma_schedule
+The only parameter that was changed in these videos is sigma_schedule.
+Settings file to reproduce: 2DZoomOutAntiBlurSigmaCompSettings.txt
+Original mp4s: sigma=0; sigma=0.6; sigma=1; sigma=5; sigma=10; sigma=25; sigma=50; sigma=100
+
+
+'Uniform' noise_schedule 2D Static Zoom
+The only parameter that was changed in these videos is noise_schedule. The old type Uniform noise is used in this comparison.
+Settings file to reproduce: NoiseSchedduleUniform2DStaticZoomCompSettings.txt
+Original mp4s: Coming soon.
+
+
+2D angle
+The only parameter that was changed in these videos is angle.
+Settings file to reproduce: 2DAngleCompSettings.txt
+Original mp4s: Coming soon.
+
+
+2D translation_x
+The only parameter that was changed in these videos is translation_x.
+Settings file to reproduce: 2DTranslationXCompSettings.txt
+Original mp4s: Coming soon.
+
+
+2D translation_y
+The only parameter that was changed in these videos is translation_y.
+Settings file to reproduce: 2DTranslationYCompSettings.txt
+Original mp4s: Coming soon.
+
+
+Text Prompts
+
+
+Prompt Engineering
+This is the main event. Typing in words and getting back pictures.  It’s why we’re all here, right?  
+
+
+In DSD, prompts are set at the very bottom of the notebook. Prompts can be a few words, a long sentence, or a few sentences. Writing prompts is an art in and of itself that won’t be covered here, but the DSD prompts section has some examples including the formatting required.
+
+
+
+
+Thought Process
+Phrase, sentence, or string of words and phrases describing what the image should look like.  The words will be analyzed by the AI and will guide the diffusion process toward the image(s) you describe. These can include commas and weights to adjust the relative importance of each element.  E.g. “ultra detailed portrai of a wise blonde beautiful female elven warrior goddess, dark, piercing glowing eyes, gentle expression, elegant clothing, photorealistic, steampunk inspired, highly detailed, artstation, smooth, sharp focus, art by michael whelan, artgerm, greg rutkowski and alphonse mucha .” 
+
+
+Elven Steampunk Princess
+
+
+Notice that this prompt loosely follows a structure: [subject], [prepositional details], [setting], [meta modifiers and artist]; this is a good starting point for your experiments.
+
+
+Developing text prompts takes practice and experience, and is not the subject of this guide.  If you are a beginner to writing text prompts, a good place to start is on a simple AI art app like Night Cafe Studio, starry ai or WOMBO prior to using DSD, to get a feel for how text gets translated into images by GAN tools.  These other apps use different technologies, but many of the same principles apply.
+
+
+
+
+Additional Prompt Info
+In the above example, we have two groupings of prompts: the still frames *prompts* on top, and the animation_prompts below. During “NONE” animation mode, the diffusion will look to the top group of prompts to produce images. In all other modes, (2D, 3D etc) the diffusion will reference the second lower group of prompts.
+
+
+Careful attention to the syntax of these prompts is critical to be able to run the diffusion.
+
+
+For still frame image output, numbers are not to be placed in front of the prompt, since no “schedule” is expected during a batch of images.
+
+
+The above prompts will produce and display a forest image and a separate image of a woman, as the outputs. 
+
+
+During 2D//3D animation runs, the lower group with prompt numbering will be referenced as specified. In the example above, we start at frame 0: – an apple image is produced. As the frames progress, it remains with an apple output until frame 20 occurs, at which the diffusion will now be directed to start including a banana as the main subject, eventually replacing the now no longer referenced apple from previous. 
+
+
+Interpolation mode, however, will “tween” the prompts in such a way that firstly, 1 image each is produced from the list of prompts. An apple, banana, coconut, and a durian fruit will be drawn. Then the diffusion begins to draw frames that should exist between the prompts, making hybrids of apples and bananas – then proceeding to fill in the gap between bananas and coconuts, finally resolving and stopping on the last image of the durian, as its destination. (remember that this exclusive mode ignores max_frames and draws the interpolate_key_frame/x_frame schedule instead. 
+
+
+Many resources exist for the context of what a prompt should include. It is up to YOU, the dreamer, to select items you feel belong in your art. Currently, prompts weights are not implemented yet in deforum, however following a template should yield fair results:
+
+
+Ex. “A Sculpture of a Purple Fox by Alex Grey, with tiny ornaments, popular on CGSociety”,
+
+
+Prompt engineering has gone too far!
+Now there’s MATH in it!
+
+
+A numerical prompt weight feature has been added to Deforum as a selectable feature. When enabled, the run will interpret the values and weights syntax of the prompt for better control and token presence. The numerical values are applied to all words before the colon, but parenthesis weights are coming soon. But there’s no explicit ‘negative prompt’ feature… Instead, all weights less than zero are added to the negative prompt automatically. Guess, what does it allow for? And what do you think, weights values adhere to MATH expressions for even more control!
+
+
+Now with a master prompt like
+
+
+eggs:`cos(6.28*t/10)`, bacon:`-cos(6.28*t/10)`
+
+
+You can go back and forth with stuff in just one line of text!
+
+
+Setup
+As stated before the notebook requires an Nvidia GPU to run and also that you have downloaded the current stable diffusion model and put it in the proper folder that your notebook references.
+Model and Output Paths:
+
+
+    models_path, looks in runtime for uploaded model
+    output_path,  directs images/file to a place in the runtime
+
+
+Google Drive Path Variables (Optional):
+
+
+    mount_google_drive, when selected will redirect paths to drive instead of runtime
+    models_path_gdrive , location of model on Google Drive (default /content/drive/MyDrive/AI/models)
+    output_path_gdrive, location of images/file to be output in Google Drive
+
+
+The notebook expects the following path variables to be defined: models_path and output_path. These locations will be used to access the Stable Diffusion .pth model weights and save the diffusion output renders, respectively. There is the option to use paths locally or on Google Drive. If you desire to use paths on Google drive, mount_google_drive must be True. Mounting Gdrive will prompt you to access your Drive, to read/write/save images.
+Setup Environment:
+
+
+    setup_environment , when checked will build environment to handle pip/installs
+    print_subprocess, choose to show items being pulled and built
+
+
+Running this cell will download github repositories, import python libraries, and create the necessary folders and files to configure the Stable Diffusion model. Sometimes there may be issues where the Setup Environment cells do not load properly and you will encounter errors when you start the run. Verify the Setup Environment cells have been run without any errors.
+Python Definitions:
+
+
+    pulls/pips/installs functions and definitions into built environment for later use during a run
+    defines variables from libraries and loads them to runtime
+
+
+Running this cell will define the required functions to proceed with making images. Verify the Python Definitions cell has been run without any errors.
+Select and Load Model:
+
+
+     model_config, type of instruction file: default .yaml, or custom option
+     model_checkpoint, the dataset to be matched to your downloaded .ckpt file
+        This is a dropdown and may include other models to test out such as robo-diffusion-v1 and waifu-diffusion-v1-3
+     custom_config_path, blank unless intending to use a custom .yaml file
+     custom_checkpoint_path, blank unless using a .cpkt file not listed 
+     load_on_run_all , when checked will be an include cell for RUN ALL function
+     check_sha256 , will perform comparison against checksum (check hash for file integrity)
+     map_location, utilizes CUDA cores on GPU[default], or uses CPU[slow] (not recommended)
+
+
+
+
+Animation
+Until this point, all of the settings have been related to creating still images.  DSD also has several animation systems that allow you to make an animated sequence of stable diffusion images.  The frames in the animation system are created using all of the same settings described above, so practice making still images will help your animated images as well. 
+
+
+There are 4 distinct animation systems: 2D, 3D, video and interpolation.  All of the animation modes take advantage of DSD’s image init function, and use either the previously created frame (2D/3D) or a frame from a separate video (video)  This starting image is injected into the diffusion process as an image init, then the diffusion runs normally.
+
+
+When using any of the animation modes, temporal coherence between frames is an important consideration, so you will need to balance between the strength of the image init, the strength of the text prompt and other guidance, and the portion of the diffusion curve you will use to modify the image init.
+
+
+The animation system also has ‘keyframes’ available, so you can change several values at various frames in the animation, and DSD will change direction.  You can even update the text prompt mid-animation, and DSD will begin to morph the image toward the new prompt, allowing for some great storytelling power! 
+
+
+Animation_mode
+As of version 0.5 you can now use custom math functions.
+    Users may now use custom math expressions as well as typical values as scheduling for parameters that allow strings, such as zoom, angle, translation, rotation, strength_schedule, and noise” Many wave functions can now be achieved with simple instructions using “t” as a variable to express frame number. Please refer to the link provided for more info about math functions.
+
+
+    NumExpr 2.0 User Guide — numexpr 2.6.3.dev0 documentation
+
+
+Another MATH Guide
+
+
+More Math Expression Details: 
+Users may now use custom math expressions as well as typical values as scheduling, such as zoom, angle, translation, rotation, strength_schedule, and noise. Many wave functions can now be achieved with simple instructions using t as a variable to express frame number. No more bothering with tables! Wherever there’s math, there’s a cheat sheet!
+
+
+It was also suggested that if you change your strength schedule to also adjust your noise schedule.  Sample starting points are:
+
+
+st=0.9 | noise = 0.00
+st=0.8 | noise = 0.01
+st=0.7 | noise = 0.02
+st=0.6 | noise = 0.03
+st=0.5 | noise = 0.04
+
+
+Amazing Math Expressions Doc from the team (link)
+
+
+None, 2D, 3D or video animation options. Details in each section below. We also have a much deeper breakdown into the animation mode further below, so keep reading!
+
+
+    None: When selected, will ignore all functions in animation mode and will output batches of images coherently unrelated to each other, as specified by the prompts list. The prompts used will follow the non-scheduled, non-animation list. The number of images that are to be produced is defined in a later cell under “n_batches”.
+    2D animation When selected will ignore the “none mode” prompts and refer to the prompts that are scheduled with a frame number before them. 2D mode will attempt to string the images produced in a sequence of coherent outputs. The number of output images to be created is defined by “max_frames”. The motion operators that control 2D mode are as follows:
+    “Border, angle, zoom, translation_x, translation_y, noise_schedule, contrast_schedule, color_coherence, diffusion_cadence, and save depth maps”. Other animation parameters have no effect during 2D mode. Resume_from_timestring is available during 2D mode.
+
+
+
+
+    3D animation
+    When selected will ignore the “none mode” prompts and refer to the prompts that are scheduled with a frame number before them. 3D mode will attempt to string the images produced in a sequence of coherent outputs. The number of output images to be created is defined by “max_frames”. The motion operators that control 3D mode are as follows:
+
+
+    “Border, translation_x, translation_y, rotation_3d_x, rotation_3d_y, rotation_3d_z, noise_schedule, contrast_schedule, color_coherence, diffusion_cadence, 3D depth warping, midas_weight, fov, padding_mode, sampling_mode, and save_depth_map. Resume_from_timestring is available during 3D mode. (more details below)
+    Video Input When selected, will ignore all motion parameters and attempt to reference a video loaded into the runtime, specified by the video_init_path. Video Input mode will ignore the “none mode” prompts and refer to the prompts that are scheduled with a frame number before them. “Max_frames” is ignored during video_input mode, and instead, follows the number of frames pulled from the video’s length. The notebook will populate images from the video into the selected drive as a string of references to be impacted. The number of frames to be pulled from the video is based on “extract_nth_frame”. Default of 1 will extract every single frame of the video. A value of 2 will skip every other frame. Values of 3 and higher will effectively skip between those frames yielding a shorter batch of images. Currently, video_input mode will ignore all other coherence parameters, and only affect each frame uniquely. Resume_from_timestring is NOT available with Video_Input mode.
+    Interpolation Mode When selected, will ignore all other motion and coherence parameters, and attempt to blend output frames between animation prompts listed with a schedule frame number before them. If interpolate_key_frame mode is checked, the number of output frames will follow your prompt schedule. If unselected, the interpolation mode will follow an even schedule of frames as specified by “interpolate_x_frames”, regardless of prompt numbering. A default value of 4 will yield four frames of interpolation between prompts.
+
+
+
+
+Perspective 2D Flipping
+This feature allows extra parameters during 2D mode to allow a faux Roll, Tilt, Pan canvas function only found in 3D mode. Users may use angle control to simulate a 2.5D effect, using only a 2D canvas mode. It may be particularly helpful in local mode, when you’re low on vram.  
+    flip_2d_perspective, This feature allows extra parameters during 2D mode to allow a “faux” Roll, Tilt, Pan canvas function only found in 3D mode. Users may use “theta, phi & gamma” angle control to simulate a 2.5D effect, using only a 2D canvas mode.
+
+
+
+
+Animation Settings
+    animation_mode, selects type of animation (see above)
+    max_frames, specifies the number of 2D or 3D images to output
+    border, controls handling method of pixels to be generated when the image is smaller than the frame. “Wrap” pulls pixels from the opposite edge of the image, while “Replicate” repeats the edge of the pixels, and extends them. Animations with quick motion may yield “lines” where this border function was attempting to populate pixels into the empty space created.
+
+
+
+
+Motion Paramaters
+Motion parameters are instructions to move the canvas in units per frame
+    angle, 2D operator to rotate canvas clockwise/counter clockwise in degrees per frame
+    zoom, 2D operator that scales the canvas size, multiplicatively [static = 1.0]
+    translation_x, 2D & 3D operator to move canvas left/right in pixels per frame
+    translation_y, 2D & 3D operator to move canvas up/down in pixels per frame
+    translation_z, 3D operator to move canvas towards/away from view
+        [speed set by FOV]
+    rotation_x, 3D operator to tilt canvas up/down in degrees per frame
+    rotation_y, 3D operator to pan canvas left/right in degrees per frame
+    rotation_z, 3D operator to roll canvas clockwise/counter clockwise
+    noise_schedule, amount of graininess to add per frame for diffusion diversity
+    strength_schedule, amount of presence of previous frame to influence next frame
+        also controls steps in the following formula [steps – (strength_schedule * steps)] (more details under: “steps”)
+    contrast_schedule, adjusts the overall contrast per frame
+        [default neutral at 1.0]
+
+
+
+
+Coherence
+    color_coherence, select between NONE, LAB, HSV, RGB
+        LAB, Perceptual Lightness* A * B axis color balance.
+            (search cielab for more info)
+        HSV: Hue Saturation & Value color balance.
+        RGB: Red Green & Blue color balance.
+
+
+The color coherence will attempt to sample the overall pixel color information, and trend those values analyzed in the 0th frame, to be applied to future frames. LAB is a more linear approach to mimic human perception of color space – a good default setting for most users.
+
+
+HSV is a good method for balancing presence of vibrant colors, but may produce unrealistic results – (ie.blue apples) RGB is good for enforcing unbiased amounts of color in each red, green and blue channel – some images may yield colorized artifacts if sampling is too low.
+
+
+    diffusion_cadence, controls the frequency of frames to be affected by diffusion [1-8]
+
+
+The diffusion cadence will attempt to follow the 2D or 3D schedule of movement as per specified in the motion parameters, while enforcing diffusion on the frames specified. The default setting of 1 will cause every frame to receive diffusion in the sequence of image outputs. A setting of 2 will only diffuse on every other frame, yet motion will still be in effect. The output of images during the cadence sequence will be automatically blended, additively and saved to the specified drive.
+
+
+This may improve the illusion of coherence in some workflows as the content and context of an image will not change or diffuse during frames that were skipped. Higher values of 4-8 cadence will skip over a larger amount of frames and only diffuse the “Nth” frame as set by the diffusion_cadence value. This may produce more continuity in an animation, at the cost of little opportunity to add more diffused content. In extreme examples, motion within a frame will fail to produce diverse prompt context, and the space will be filled with lines or approximations of content – resulting in unexpected animation patterns and artifacts. Video Input & Interpolation modes are not affected by diffusion_cadence. 
+
+
+Example: 
+
+
+    Cadence5 -> diffuse 1 frame, draw 4 non-diffused -> output 5 total
+    Cadence1 -> diffuse 1 frame, draw 0 non-diffused -> output 1 total
+    Cadance8 -> diffuse 1 frame, draw 7 non-diffused -> output 8 total
+
+
+The cadence number will always equal the final number of outputs, with the first of that group to be the diffused one.
+3D Depth Warping
+
+
+    use_depth_warping, enables instructions to warp an image dynamically in 3D mode only.
+    midas_weight, sets a midpoint at which a depthmap is to be drawn: range [-1 to +1]
+    fov, adjusts the scale at which a canvas is moved in 3D by the translation_z value
+
+
+FOV (field of view/vision) in deforum, will give specific instructions as to how the translation_z value affects the canvas. Range is -180 to +180. The value follows the inverse square law of a curve in such a way that 0 FOV is undefined and will produce a blank image output. A FOV of 180 will flatten and place the canvas plane in line with the view, causing no motion in the Z direction. Negative values of FOV will cause the translation_z instructions to invert, moving in an opposite direction to the Z plane, while retaining other normal functions.A value of 30 fov is default whereas a value of 100 would cause transition in the Z direction to be more smooth and slow. Each type of art and context will benefit differently from different FOV values. (ex. “Still-life photo of an apple” will react differently than “A large room with plants”)
+
+
+FOV also lends instruction as to how a MiDaS depth map is interpreted. The depth map (a greyscale image) will have its range of pixel values stretched or compressed in accordance with the FOV in such a fashion that the illusion of 3D is more pronounced at lower FOV values, and more shallow at values closer to 180. At full FOV of 180, no depth is perceived, as the MiDaS depth map has been compressed to a single value range.
+
+
+    padding_mode, instructs the handling of pixels outside the field of view as they come into the scene. ‘Border” will attempt to use the edges of the canvas as the pixels to be drawn. “Reflection” will attempt to approximate the image and tile/repeat pixels, whereas “Zeros” will not add any new pixel information.
+    sampling_mode, choose from Bicubis, Bilinear or Nearest modes.
+
+
+In image processing, bicubic interpolation is often chosen over bilinear or nearest-neighbor interpolation in image resampling, when speed is not an issue. In contrast to bilinear interpolation, which only takes 4 pixels (2×2) into account, bicubic interpolation considers 16 pixels (4×4). Images resampled with bicubic interpolation are smoother and have fewer interpolation artifacts.
+
+
+    save_depth_map, will output a greyscale depth map image alongside the output images.
+
+
+
+
+Video Input Settings 
+As noted above, video input animation mode takes individual frames from a user-provided video clip (mp4) and uses those sequentially as init_images to create diffusion images.  
+
+
+    video_init_path, Source path for the user-provided video to be used as the source for image inputs for animation. To use a video init, upload the video to the Colab instance or your Google Drive, and enter the full source path. A typical path will read /content/video_name.mp4.
+    extract_nth_frame,  (2|1-6) allows you to extract every nth frame of video.  If you have a 24fps video, but only want to render 12 frames per second of DSD images, set extract_nth_frame to 2.
+    overwrite_extracted_frames, By default, a video file will extract and save its frames to drive every run. This new option allows the user to bypass this process for future runs, and skip right ahead to render.
+    use_mask_video, During Video Input mode, users may select to also include an additional video to be used as a mask. Frames will be extracted for both the video init, as well as the video mask, and used in conjunction.  This should be a black and white video, currently alpha channel isn’t supported as a mask.
+
+
+
+
+More Details about Dynamic Video Masking
+During Video Input mode, users may select to also include an additional video to be used as a mask. Frames will be extracted for both the video init, as well as the video mask, and used in conjunction. Now you can be a fire-mage (or an anime girl, whatever you like) without changing the rest of the environment!
+
+
+FYI: video input does not work with cadence. It ignores your cadence values.
+Interpolation
+
+
+    interpolate_key_frames, selects whether to ignore prompt schedule or _x_frames.
+    interpolate_x_frames, the number of frames to transition thru between prompts
+
+
+when interpolate_key_frames = true, then the numbers in front of the animation prompts will dynamically guide the images based on their value. If set to false, will ignore the prompt numbers and force interpolate_x_frames value regardless of prompt number
+Resume Animation
+
+
+    resume_from_timestring, instructs the run to start from a specified point
+    resume_timestring, the required timestamp to reference when resuming
+
+
+Currently only available in 2D & 3D mode, the timestamp is saved as the settings .txt file name as well as images produced during your previous run. The format follows:
+
+
+yyyymmddhhmmss – a timestamp of when the run was started to diffuse.
+Animation Mode Breakdowns (Detailed)
+2D Animation Settings
+
+
+Remember that in 2d animation mode, DSD is shifting the CANVAS of the prior image, so directions may feel confusing at first.
+
+
+angle:
+(0|-3 to 3) (2D only) Rotates image by () degrees each frame. Positive angle values rotate the image counter-clockwise, (which feels like a camera rotating clockwise.)
+
+
+
+
+zoom:
+(2D only) (1.10|0.8 – 1.25) Scales image by () percentage each frame.  zoom of 1.0 is 100% scaling, thus no zoom. zoom values over 1.0 are scale increases, thus zooming into an image. 1.10 is a good starting value for a forward zoom. Values below 1.0 will zoom out. 
+
+
+
+
+translation_x, translation_y
+In 2D mode
+(0|-10 to 10) In 2D mode, the translation parameter shifts the image by () pixels per frame. 
+
+
+    X is left/right; positive translation_x shifts the image to the right (which feels like camera shift to the left) 
+    Y is up/down; positive translation_y shifts the image down the screen (which feels like a camera shift upward)
+
+
+
+
+3D Animation Settings
+Recall that in 3D animation mode, there is a virtual 3d space created from the prior animation frame, and a virtual camera is moved through that space.
+
+
+(Image CC BY 4.0 by Joey de Vries, from https://learnopengl.com)
+
+
+3D Rotations follow the diagram above, with positive values following the direction of the arrows.  NOTE: DSD are measured in degrees. 
+
+
+
+
+rotation_3d_x:
+(3D only) (0|-3 to 3) Measured in degrees.  Rotates the camera around the x axis, thus shifting the 3D view of the camera up or down. Similar to pitch in an airplane. Positive rotation_3d_x pitches the camera upward. 
+
+
+
+
+rotation_3d_y:
+(3D only) (0|-3 to 3) Measured in degrees. Rotates the camera around the y axis, thus shifting the 3D view of the camera left or right. Similar to yaw in an airplane. Positive rotation_3d_y pans the camera to the right. 
+
+
+
+
+rotation_3d_z:
+(3D only) (0|-3 to 3) Measured in degrees. Rotates the camera around the z axis, thus rotating the 3D view of the camera clockwise or counterclockwise. Similar to roll in an airplane. Positive rotation_3d_z rolls the camera clockwise. 
+
+
+
+
+translation_x, translation_y, translation_z:
+In 3D Mode ONLY
+
+
+(0|-10 to 10) In 3D mode, translation parameters behave differently than in 2D mode – they shift the camera in the virtual 3D space.  
+
+
+    X is left/right; positive translation_x shifts the camera to the right
+    y is up/down; positive translation_y shifts the camera upward
+    z is forward/backwards (zooming); positive translation_z shifts the camera forward
+
+
+The distance units for translations (x, y or z) in 3D mode are set to an arbitrary scale where 10 units is a reasonable distance to zoom forward via translate_z. Depending on your scene and scale, you will need to experiment with varying translation values to achieve your goals.
+
+
+
+
+Run Settings
+After your prompt and settings are ready, visit the Do the Run! code cell near the bottom of the notebook, edit the settings, then run it. DSD will start the process, and store the finished images in your batch folder.
+Load Settings
+
+
+Users may now select an “override” function that will bypass all instructions from the notebook settings, and instead run from a settings.txt file previously saved by the user. This function is reverse compatible to v04. This feature does not auto-populate settings into your notebook, however it directly runs the instructions found within the .txt file.
+
+
+    override_settings_with_file, enable this feature
+    custom_settings_file, path for your settings file you want to use
+
+
+
+
+Image Settings – Width and Height
+([Width, Height]|limited by VRAM) desired final image size, in pixels. You can have a square, wide, or tall image, but each edge length should be set to a multiple of 64px.  If you forget to use multiples of 64px in your dimensions, DSD will adjust the dimensions of your image to make it so.
+
+
+The model was trained on a 512×512 dataset, and therefore must extend its diffusion outside of this “footprint” to cover the canvas size. A wide landscape image may produce 2 trees side-by-side as a result, or perhaps 2 moons in either side of the sky.. A tall portrait image may produce faces that are stacked instead of centered. 
+
+
+Significantly larger dimensions will use significantly more memory (and may crash DSD!) so start small at first.
+Tips for Portraits. 
+
+
+I tend to use 448×704 as a starting resolution for portirate style images, anything taller can lead to double head situations. 
+
+
+Resolution of 512×832
+Stable Diffusion Double Head
+
+
+Let us know what works well for you.
+
+
+
+
+Sampling Settings:
+    seed, a starting point for a specific deterministic outcome, (-1 = random starting point)
+    sampler, method in which the image is encoded and decoded from latent space
+        klms = Kernel Least Mean Square
+        Dpm2 = Denoise Probabilistic Model
+        Dpm2_Ancestral = dpm2 with reverse sampling path
+        Heun = founded off of Euler by Karl Heun (maths & derivative solving)
+        Euler =  fractional-order anisotropic denoise (Euler-Lagrange equations)
+        Euler_Ancestral = reverse sampling path to Euler
+        Plms = Pre-trained Language Model(s)
+        Ddim = Denoising Diffusion Probabilistic Models
+    steps, the number of iterations intended for a model to reach its prompt
+
+
+Things to remember with steps values:
+
+
+Considering that during one frame, a model will attempt to reach its prompt by the final step in that frame. By adding more steps, the frame is sliced into smaller increments as the model approaches completion. Higher steps will add more defining features to an output at the cost of time. Lower values will cause the model to rush towards its goal, providing vague attempts at your prompt. Beyond a certain value, if the model has achieved its prompt, further steps will have very little impact on final output, yet time will still be a wasted resource. Some prompts also require fewer steps to achieve a desirable acceptable output.
+
+
+During 2D & 3D animation modes, coherence is important to produce continuity of motion during video playback. The value under Motion Parameters, “strength_schedule” achieves this coherence by utilizing a proportion of the previous frame, into the current diffusion. This proportion is a scale of 0 – 1.0 , with 0 meaning there’s no cohesion whatsoever, and a brand new unrelated image will be diffused. A value of 1.0 means ALL of the previous frame will be utilized for the next, and no diffusion is needed. Since this relationship of previous frame to new diffusion consists of steps diffused previously, a formula was created to compensate for the remaining steps to justify the difference. That formula is as such:
+Target Steps – (strength_schedule * Target Steps) 
+
+
+Your first frame will, however, yield all of the steps – as the formula will be in effect afterwards.
+
+
+    scale, a measurement of how much enforcement to apply to an overall prompt. A normal range of 7-10 is appropriate for most scenes, however some styles and art will require more extreme values. At scale values below 3, the model will loosely impose a prompt with many areas skipped and left uninteresting or simply grayed-out. Values higher than 25 may over enforce a prompt causing extreme colors of over saturation, artifacts and unbalanced details. For some use-cases this might be a desirable effect. During some animation modes, having a scale that is too high, may trend color into a direction that causes bias and overexposed output.
+    ddim_eta, ONLY enabled in ddim sampler mode, will control a ratio of ddim to ddpm sampling methods, with a range of -1 to +1 with 0 being less randomized determinism.
+
+
+
+
+Save & Display Settings:
+    save_samples, will save output images to the specified drive, including cadence frames
+    save_settings, will save a snapshot .txt of all settings used to start a run with a timestamp
+    display_samples, shows on-screen image of the completed output
+    save_sample_per_step, Users may now choose to view intermediate steps of a frame, as well as the option to save those steps as output images to drive. This powerful feature may use a lot of drive space, and browser cache if many steps are used in long renders. 500 steps will display/save 500 images.
+    show_sample_per_step, visually show this in the notebook.
+
+
+Prompt Settings
+A numerical prompt weight feature has been added to deforum as a selectable feature. When enabled, the run will interpret the values and weights syntax of the prompt for better control and token presence. Bonus: weights values adhere to MATH expressions for even more control.
+
+
+    prompt_weighting, no documentation, assumption is turning the ability to use weights in prompts on.
+    normalize_prompt_weights, ??
+    log_weighted_subprompts, ??
+
+
+
+
+Batch Settings:
+This feature allows you to run a batch on your prompt or prompts and have it generate various images with different seed values and then output this as a grid if you enabled this.
+
+
+You can play around with this value and also adjust the seed_behavior to see how the results turn out.  Remember this is all about experimenting so take the time to test this feature out.
+
+
+
+
+Settings Details:
+    n_batch, produces n amounts of outputs per prompt in ‘none’ animation mode
+    batch_name, will create a folder and save output content to that directory location
+    seed behavior, will perform progressive changes on the seed starting point based on settings:
+        Iter = incremental change (ex 77, 78, 79 ,80, 81, 82, 83…)
+        Fixed = no change in seed (ex 33, 33, 33, 33, 33, 33…)
+        Random = randomized seed (ex 472, 12, 927812, 8001, 724…)
+        Note: seed -1 will choose a random starting point, following the seed behavior thereafter
+        Troubleshoot: a “fixed” seed in 2D/3D mode will over bloom your output. Switch to “iter”
+
+
+    make_grid, will take take still frames and stitch them together in a preview grid
+
+
+    grid_rows, arrangement of images set by make_grid
+
+
+
+
+Init Settings:
+You can use your own custom images to help guide the model to try to mimic more of the look and feel from the image you want.  
+
+
+    use_init, uses a custom image as a starting point for diffusion
+    strength, determines the presence of an init_image/video on a scale of 0-1 with 0 being full diffusion, and 1 being full init source.
+
+
+Note: even with use_init unchecked, video input is still affected.
+
+
+    init_image, location of an init_image to be used
+
+
+Note: in ‘none’ animation mode, a folder of images may be referenced here.
+
+
+    use mask, adds an image for instructions as to which part of an image to diffuse by greyscale
+    mask_file, location of the mask image to be used
+    invert_mask, ranges the greyscale of a mask from “0 to 1” into “1 to 0”
+    mask_brightness_adjust, changes the value floor of the mask, controlling diffusion overall
+    mask_contrast_adjust,  clamps min/max values of the mask to limit areas of diffusion
+
+
+Note: lighter areas of the mask = no diffusion, darker areas enforce more diffusion
+
+
+Examples to come showing off the init images, init videos and mask features!
+
+
+
+
+Create Video from Frames
+    skip_video_for_run_all, when running-all this notebook, video construction will be skipped until manually checked and the cell is re-run. It is off by default.
+    fps, frame rate at which the video will be rendered
+    image_path, location of images intended to be stitched in sequence. The user must update this parameter to reflect the timestamp needed. 
+    mp4_path, location to save the resulting video to
+    max_frames, the quantity of images to be prepared for stitching
+
+
+Miscellaneous
+I want to run DSD on my super powerful home PC with the wicked smart graphics card.
+
+
+Info coming soon, but I highly recommend Visions of Chaos Windows App for the Swiss Army knife of ML and AI Art scripts! I should have a tutorial on this soon.  IF you do go this route follow the instructions verbatim!
+
+
+ 
+Getting your output
+DSD will store your your images and videos into your google drive in:
+
+
+ \My Drive\AI\StableDiffusion\<date>\folder name based upon the batch_name setting
+
+
+You can browse to this directory in a second window to monitor progress, and download the entire folder when your project is complete.
+
+
+
+
+Most of our guide is a combination of these, which usually has all the latest info.
+
+
+    DSD Settings Guide
+    DSD v0.5 Details and Explanation’s
+    Math Guide
+
+
+Credit is due to the respective authors.
+
+
+Stable Diffusion Parameter studies:
+
+
+    Stable Diffusion Ultimate Beginners Guide
+    SD Guide for Artists and Non-Artists***
+
+
+
+
+Modifiers
+    CFG Studies 
+    Sampler Studies
+    Sampler / Step Count Comparison with timing info
+    Stylistic Lighting Studies 
+    Math Guide for Animation Settings
+
+
+
+
+Artist Studies
+    Disco Diffusion Artists Study
+    Stable Diffusion – Micro Art Studies
+    WIP list artists for SD v1.4
+    SD Artist Collection
+
+
+
+
+Style Studies / Text Prompts
+    Trending on Artstation and other Myths
+    Test seeds, clothing and clothing modifications
