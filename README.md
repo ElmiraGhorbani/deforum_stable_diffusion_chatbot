@@ -18,9 +18,7 @@ docker-compose up -d
 ```
 
 ## Testing
-
+open FastApi swagger, hit try it out.
 ```
-
-python scripts/request_sample.py
-
+http://0.0.0.0:8086/docs
 ```
