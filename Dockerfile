@@ -4,8 +4,7 @@ USER root:root
 
 ENV PYTHONUNBUFFERED TRUE
 
-RUN sed --in-place --regexp-extended "s/(\/\/)(archive\.ubuntu)/\ir.\2/" /etc/apt/sources.list && \
-	apt-get update && apt-get upgrade --yes
+RUN apt-get update && apt-get upgrade --yes
 
 RUN apt install -y wget \
     git \
