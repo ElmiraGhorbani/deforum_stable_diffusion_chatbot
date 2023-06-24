@@ -11,8 +11,8 @@ https://github.com/ElmiraGhorbani/deforum_stable_diffusion_chatbot/assets/232375
 
 ## Getting started
 
+NOTE: set your OpenAI API key.  (source in ./scripts/app.py and .env.example)
 ```
-
 cp .env.example .env
 
 ```
