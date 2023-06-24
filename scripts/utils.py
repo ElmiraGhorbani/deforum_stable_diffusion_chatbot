@@ -13,4 +13,4 @@ def check_if_file_exists():
     :return: True if file exists else False
     """
     root_path = get_project_root()
-    return os.path.exists(f'{root_path}/vector_store.json')
+    return os.path.exists(f'{root_path}/storage_deforum/vector_store.json')
