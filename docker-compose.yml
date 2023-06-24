@@ -12,6 +12,7 @@ services:
         command: ["./run.sh"]
         volumes:
             - ./resource:/resource:rw
+            - ./storage_deforum:/storage_deforum:rw
         environment:
             - NUM_WORKERS=${NUM_WORKERS}
             - OPENAI_API_KEY=${OPENAI_API_KEY}
