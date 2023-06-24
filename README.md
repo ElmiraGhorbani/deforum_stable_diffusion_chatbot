@@ -3,7 +3,7 @@ Understanding or locating the correct configuration for deforum stable diffusion
 
 Feel free to to contribute to and expand its documentation.
 
-
+Deforum Stable Diffusion is a version of Stable Diffusion focussing on creating videos and transitions of images created with Stable Diffusion. By employing Deforum Stable Diffusion, you can produce captivating videos similar to the example provided below.
 
 https://github.com/ElmiraGhorbani/deforum_stable_diffusion_chatbot/assets/23237541/980919d0-6cae-4432-b7f8-1b674844d162
 
