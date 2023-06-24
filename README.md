@@ -3,6 +3,8 @@ Understanding or locating the correct configuration for deforum stable diffusion
 
 Feel free to to contribute to and expand its documentation.
 
+<video src='./resource/video/download.mp4' width=180/>
+
 ## Getting started
 
 ```
@@ -19,6 +21,11 @@ docker-compose up -d
 
 ## Testing
 open FastApi swagger, hit try it out.
+
+![Screenshot](./resource/images/request.png)
+
 ```
 http://0.0.0.0:8086/docs
 ```
+
+![Screenshot](./resource/images/response.png)
